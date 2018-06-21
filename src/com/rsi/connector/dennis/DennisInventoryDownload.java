@@ -288,7 +288,7 @@ public class DennisInventoryDownload {
 				Thread.sleep(3000);
 				StatusLine statusLine = firstPageResult.getStatusLine();
 				int statusCode = statusLine.getStatusCode();
-				System.out.print("status code: " + statusCode);
+				System.out.println("status code: " + statusCode);
 				if (statusCode == 200) {
 					HttpEntity firstpageEntity = firstPageResult.getEntity();
 					String firstPageResString = EntityUtils.toString(firstpageEntity);
