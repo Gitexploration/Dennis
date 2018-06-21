@@ -379,7 +379,14 @@ public class DennisInventoryDownload {
 			}
 			success = true;
 		} catch (Exception e) {
+			driver.quit();
+			driver = null;
 			e.printStackTrace();
+		}finally{
+			if(driver!=null){
+				driver.quit();
+				driver = null;
+			}
 		}
 		return success;
 	}
