@@ -36,6 +36,7 @@ import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.Cookie;
 
 import com.rsi.connector.dennis.DennisInventoryDownload;
+import com.rsi.connector.dennis.DennisSalesDownload;
 
 /**
  * @author Johnny.Shi
@@ -50,9 +51,10 @@ public class HttpClientRTMartDownload {
 		// TODO Auto-generated constructor stub
 	}
 
-	public long downloadMonthlySalesFile(String url, Set<Cookie> cookies, String downloadDirectory, String fileName,
-			String host, int curPageNbr, String year, String month, String day, String storeCode) throws Exception {
+	public boolean downloadSalesFile(String url, Set<Cookie> cookies, String downloadDirectory, String fileName,
+			String host, int curPageNbr, String year, String month, String day, String storeCode, String storeName, int currentStoreIndex) throws Exception {
 		long filelongth = 0;
+		boolean success= false;
 		File file = null;
 		BufferedReader br = null;
 		FileWriter fw = null;
@@ -110,39 +112,54 @@ public class HttpClientRTMartDownload {
 					log.info("print all response headers info done");
 					log.info("*********************");
 					// Examine the response status
+					StatusLine statusLine = response.getStatusLine();
+					int statusCode = statusLine.getStatusCode();
 					log.info(response.getStatusLine());
+					System.out.println(response.getStatusLine());
 					HttpEntity entity = response.getEntity();
-
-					if (entity != null) {
-						log.info("Content Length " + entity.getContentLength() + " Bytes");
-						log.info(entity.getContentType());
-						log.info(entity.getContentEncoding());
-
-						file = new File(downloadDirectory + File.separator + fileName);
-						if (!(new File(downloadDirectory + File.separator).exists())) {
-							new File(downloadDirectory + File.separator).mkdirs();
-						}
-						/* update by RubyWang 文件中部分中文乱码问题 */
-						long t2 = System.currentTimeMillis();
+					
+					if (statusCode == 200) {
 						if (entity != null) {
-							BufferedHttpEntity buf = new BufferedHttpEntity(entity);
-							isr = new InputStreamReader(buf.getContent(), "GBK");
-							br = new BufferedReader(isr);
-							fw = new FileWriter(file, false);
-							String str = null;
-							while ((str = br.readLine()) != null) {
-								fw.write(str + "\n");
+							log.info("Content Length " + entity.getContentLength() + " Bytes");
+							log.info(entity.getContentType());
+							log.info(entity.getContentEncoding());
+
+							file = new File(downloadDirectory + File.separator + fileName);
+							if (!(new File(downloadDirectory + File.separator).exists())) {
+								new File(downloadDirectory + File.separator).mkdirs();
 							}
-							fw.flush();
+							/* update by RubyWang 文件中部分中文乱码问题 */
+							long t2 = System.currentTimeMillis();
+							if (entity != null) {
+								BufferedHttpEntity buf = new BufferedHttpEntity(entity);
+								isr = new InputStreamReader(buf.getContent(), "GBK");
+								br = new BufferedReader(isr);
+								fw = new FileWriter(file, false);
+								String str = null;
+								while ((str = br.readLine()) != null) {
+									fw.write(str + "\n");
+								}
+								fw.flush();
+							}
+							EntityUtils.consume(entity);
+							long t3 = System.currentTimeMillis();
+							filelongth = file.length();
+							log.info("filelongth: " + filelongth);
+							log.info(fileName + " File download successfully!!!");
+							success = true;
+							DennisInventoryDownload.resetIndexes();
+							break;
+							// do something useful with the response
 						}
-						EntityUtils.consume(entity);
-						long t3 = System.currentTimeMillis();
-						filelongth = file.length();
-						log.info("filelongth: " + filelongth);
-						log.info(fileName + " File download successfully!!!");
-						break;
-						// do something useful with the response
+					}else{
+						//  do something
+						DennisSalesDownload.currentStoreCode = storeCode;
+						DennisSalesDownload.currentStoreName = storeName;
+						DennisSalesDownload.currentStoreIndex = currentStoreIndex;
+						DennisSalesDownload.currentPageNbr = curPageNbr;
+						success=false;
 					}
+					
 				} catch (Exception e) {
 					log.info("exception when download file, The name is : " + fileName);
 					log.error("download failed", e.fillInStackTrace());
@@ -151,6 +168,7 @@ public class HttpClientRTMartDownload {
 				}
 			}
 		} catch (Exception e) {
+			success=false;
 			log.error("exception " + e.fillInStackTrace());
 			throw e;
 		} finally {
@@ -172,7 +190,7 @@ public class HttpClientRTMartDownload {
 				throw e;
 			}
 		}
-		return filelongth;
+		return success;
 	}
 
 	public boolean downloadInventoryFile(String url, Set<Cookie> cookies, String downloadDirectory, String fileName,

@@ -15,6 +15,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.StatusLine;
+import org.apache.http.client.CookieStore;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.protocol.ClientContext;
+import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.cookie.BasicClientCookie;
+import org.apache.http.protocol.BasicHttpContext;
+import org.apache.http.protocol.HttpContext;
+import org.apache.http.util.EntityUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -33,6 +45,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 
 import util.HttpClientRTMartDownload;
+import util.MergeFiles;
 
 public class DennisSalesDownload {
 
@@ -40,210 +53,193 @@ public class DennisSalesDownload {
 	private static String userName = "11000112";
 	private static String password = "pg1001";
 	private static final String SALESURL = "http://www.dennis.com.cn:9090/Vend_New/scm_sup2_itemsale.asp";
-	// http://www.dennis.com.cn:9090/Vend_New/scm_login.asp?target=scm_sup2_itemsale.asp
 	private static final String HOST = "www.dennis.com.cn:9090";
+	public static String currentStoreCode = "";
+	public static String currentStoreName = "";
+	public static int currentPageNbr = 1;
+	public static int currentStoreIndex = 2;
 
 	public static void main(String[] args) throws Exception {
 		System.setProperty("webdriver.gecko.driver", "D:/ksj_soft/geckodriver.exe");
-		System.setProperty("webdriver.firefox.bin", "C:/Program Files (x86)/Mozilla Firefox/firefox.exe");
-		WebDriver driver = null;
-		FirefoxOptions options = new FirefoxOptions();
-		driver = new FirefoxDriver(options);
-		// driver.setJavascriptEnabled(true);
-		driver.manage().timeouts().implicitlyWait(60, TimeUnit.SECONDS);
-		// TODO Auto-generated method stub
-		driver.get(DENNISURL);
-		System.out.println("log in to RTMart portal");
-
-		try {
-
-			driver.findElement(By.name("Name")).clear();
-			driver.findElement(By.name("Name")).sendKeys(userName);
-			System.out.println("Input user ID: " + userName);
-
-			driver.findElement(By.name("Password")).clear();
-			driver.findElement(By.name("Password")).sendKeys(password);
-			System.out.println("Input PWD: " + password);
-
-			// 点击登录链接
-			driver.findElement(By.name("enter")).click();
-			Thread.sleep(3000);
-
-			String title = new String(driver.getTitle());
-			if (title.contains("厂商管理")) {
-
-				System.out.println("登陆成功");
-
-			} else {
-				System.out.println("登录失败");
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			System.out.println("Connection Refused : " + e);
-		}
-
-		fileDownload(driver);
-
+		fileDownload();
 	}
 
-	private static void DownloadSales(WebDriver driver) throws Exception {
+	private static boolean DownloadSales(WebDriver driver) {
+		boolean success = false;
 		driver.get(SALESURL);
 		String salesExportURL = SALESURL;
 		String currentUrl = driver.getCurrentUrl();
 		System.out.println(currentUrl);
+		try {
+			String downloadDir = "D:/ksj/downloads/Dennis/Sales";
+			Calendar c = Calendar.getInstance();
+			String tempDir = downloadDir + File.separator + "temp";
+			File tempDirectory = new File(tempDir);
+			if (!tempDirectory.exists()) {
+				tempDirectory.mkdirs();
+			}
 
-		OutputStreamWriter out = null;
-		HttpClientRTMartDownload downloadUtil = new HttpClientRTMartDownload();
-		String downloadDir = "D:/ksj/downloads/Dennis/download/sales";
-		Calendar c = Calendar.getInstance();
-		String tempDir = downloadDir + File.separator + "temp";
-		File tempDirectory = new File(tempDir);
-		if (!tempDirectory.exists()) {
-			tempDirectory.mkdirs();
-		}
-
-		// c.add(Calendar.DAY_OF_YEAR, 1);
-		for (int d = 0; d < 3; d++) {
 			c.add(Calendar.DAY_OF_YEAR, -1);
 			SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd");
 			SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 			String dateStr = sdf1.format(c.getTime());
 			String dateStr1 = dateStr.replaceAll("-", "");
 			String dateStr2 = sdf2.format(c.getTime()).replace("-", "_").replace(":", "_").replace(" ", "_");
-			System.out.println(dateStr);
+			
+			String mergeFile = "KSJ.PNG_Sales_Dennis."+dateStr1+".req"+dateStr2+".txt";
+			
+			OutputStreamWriter out = null;
+			HttpClientRTMartDownload downloadUtil = new HttpClientRTMartDownload();
+			Set<Cookie> cookies = driver.manage().getCookies();
+
 			String[] strDate = dateStr.split("-");
 			String year = strDate[0];
 			String month = strDate[1];
 			String day = strDate[2];
-			System.out.println(year + "," + month + "," + day);
-
-			driver.findElement(By.name("TranYears")).clear();
-			driver.findElement(By.name("TranYears")).sendKeys(year);
-
-			driver.findElement(By.name("TranMonths")).clear();
-			driver.findElement(By.name("TranMonths")).sendKeys(month);
-
-			driver.findElement(By.name("TranDays")).clear();
-			driver.findElement(By.name("TranDays")).sendKeys(day);
-
-			driver.findElement(By.name("TranYeare")).clear();
-			driver.findElement(By.name("TranYeare")).sendKeys(year);
-
-			driver.findElement(By.name("TranMonthe")).clear();
-			driver.findElement(By.name("TranMonthe")).sendKeys(month);
-
-			driver.findElement(By.name("TranDaye")).clear();
-			driver.findElement(By.name("TranDaye")).sendKeys(day);
-
-			String fileName = "KSJ.PNG_Sales_Dennis." + dateStr1 + ".req" + dateStr2 + ".txt";
-			// "KSJ.Vendorname_Sales_Dennis.20180531.req2018_06_01_15_01_33.txt";
-
-			try {
-				StringBuilder line = new StringBuilder("商品代号\t条码\t商品名称\t规格\t销售数量\t销售金额\t门店编号\t门店名称\t时间\r\n");
-				File file = new File(downloadDir + File.separator + fileName);
-				if (!(new File(downloadDir + File.separator).exists())) {
-					new File(downloadDir + File.separator).mkdirs();
-				}
-				out = new OutputStreamWriter(new java.io.FileOutputStream(file, true), "UTF-8");
-				out.write(line.toString());
-				out.flush();
-			} catch (UnsupportedEncodingException e2) {
-				// TODO Auto-generated catch block
-				e2.printStackTrace();
-			} catch (FileNotFoundException e2) {
-				// TODO Auto-generated catch block
-				e2.printStackTrace();
-			} catch (IOException e2) {
-				// TODO Auto-generated catch block
-				e2.printStackTrace();
-			}
+//			System.out.println(year + "," + month + "," + day);
 
 			String pageSource = driver.getPageSource();
 			Document document = Jsoup.parse(pageSource);
 			Elements es = document.select("[name=storecode] option");
 			int elementsSize = es.size();
 			System.out.println("门店总数:" + (elementsSize - 2));
-			for (int i = 248; i < elementsSize; i++) {
+			int i = 2;
+			i = currentStoreIndex;
+			for (; i < elementsSize; i++) {
+				int curPageNbr = currentPageNbr;
 				Element element = es.get(i);
 				String storeInfo = element.text();
 				System.out.println("当前第" + (i - 1) + "门店:" + storeInfo);
-				String storeCode = storeInfo.split("/")[0];
-				String storeName = storeInfo.split("/")[1];
+				String storeCode = element.val().toString().trim();
+				String storeName = storeInfo.split("/")[1].trim();
 
-				System.out.println("storeCode:" + storeCode + ",storeName:" + storeName);
-				new Select(driver.findElement(By.name("storecode"))).selectByIndex(i);
-				driver.findElement(By.name("Submit")).click();
-				Set<Cookie> cookies = driver.manage().getCookies();
+				String fileName = "KSJ.PNG_Sales_Dennis." + storeCode + "." + dateStr1 + ".req" + dateStr2 + ".txt";
+				
+				addSalesHeader(fileName, downloadDir, out);
+				
+				String url = "http://www.dennis.com.cn:9090/Vend_New/scm_sup2_itemsale.asp";
+				url = url + "?mode=search";
+				url = url + "&tranyears=" + year;
+				url = url + "&tranmonths=" + month;
+				url = url + "&trandays=" + day;
+				url = url + "&tranyeare=" + year;
+				url = url + "&tranmonthe=" + month;
+				url = url + "&trandaye=" + day;
+				url = url + "&storecode=" + storeCode;
+				url = url + "&whichpage=" + 1;
 
-				int totalPages;
-				int curPageNbr;
-				try {
-
-					WebDriverWait wait = new WebDriverWait(driver, 10);
-
-					wait.until(ExpectedConditions.visibilityOfElementLocated(
-							By.xpath("//td[@bgcolor='black']/table/tbody/tr[3]/td[1]//font")));
-
-					String isNull = driver.findElement(By.xpath("//td[@bgcolor='black']/table/tbody/tr[3]/td[1]//font"))
-							.getText().trim();// "//"表示获取所有子孙font
-
-					System.out.println(isNull);
-					// 获取分页信息
-					By location = By.xpath("//td[@align='left'][@valign='bottom']/font");
-					if (isWebElementExist(driver, location) != true) {
-						if ("尚没有销售资料".equals(isNull)) {
-							System.out.println("尚没有销售资料");
-							continue;
-						} else {
-							totalPages = 1;
-							curPageNbr = 1;
-							System.out.println(storeName + "总共有1页数据");
-						}
-					} else {
-						String pageInfo = driver.findElement(By.xpath("//td[@align='left'][@valign='bottom']/font"))
-								.getText();
-						totalPages = Integer.parseInt(pageInfo.replace("当前", "").replace("页", "").split("/")[1]);
-						curPageNbr = Integer.parseInt(pageInfo.replace("当前", "").replace("页", "").split("/")[0]);
-
-						System.out.println(storeName + "总共有" + totalPages + "页数据");
-					}
-				} catch (Exception e1) {
-					System.out.println("Error when parse latest update date from web, ignore this file downloading.");
-					return;
+				DefaultHttpClient client = null;
+				client = new DefaultHttpClient();
+				CookieStore cs = new BasicCookieStore();
+				for (Cookie ck : cookies) {
+					BasicClientCookie bcc = new BasicClientCookie(ck.getName(), ck.getValue());
+					bcc.setDomain(ck.getDomain());
+					bcc.setPath(ck.getPath());
+					cs.addCookie(bcc);
 				}
+				HttpContext localContext = new BasicHttpContext();
+				localContext.setAttribute(ClientContext.COOKIE_STORE, cs);
+				// response = httpclient.execute(httpget,localContext);
 
-				try {
-					for (; curPageNbr <= totalPages; curPageNbr++) {
-						downloadUtil.downloadMonthlySalesFile(salesExportURL, cookies, tempDir, fileName, HOST,
-								curPageNbr, year, month, day, storeCode);
-						System.out.println("下载页面：curPageNbr:" + curPageNbr + ",totalPages:" + totalPages);
+				HttpGet httpGet = new HttpGet(url);
+				// HttpClient client = new DefaultHttpClient();
+				CloseableHttpResponse firstPageResult = (CloseableHttpResponse) client.execute(httpGet, localContext);
+				Thread.sleep(3000);
+				StatusLine statusLine = firstPageResult.getStatusLine();
+				int statusCode = statusLine.getStatusCode();
+				System.out.println("status code: " + statusCode);
+				if (statusCode == 200) {
+					HttpEntity firstpageEntity = firstPageResult.getEntity();
+					String firstPageResString = EntityUtils.toString(firstpageEntity);
+					Document firstResDoc = Jsoup.parse(firstPageResString);
+					Elements whicPageOptions = firstResDoc.select("[name=whichpage] option");
+					int totalNumofPages = whicPageOptions.size();
+					EntityUtils.consume(firstpageEntity);
+					firstPageResult.close();
 
-						parseFile(downloadDir, tempDir, fileName, curPageNbr, storeCode, storeName, dateStr1);
-						if (curPageNbr < totalPages) {
-							System.out.println("Begin to get next page's data");
-							driver.findElement(By.linkText("下一页")).click();
-
-						}
+					System.out.println("storeCode:" + storeCode + ",storeName:" + storeName);
+					boolean contain = firstPageResString.contains("尚没有销售资料");
+					if (totalNumofPages == 0 && contain) {
+						continue;
+					}
+					if (totalNumofPages == 0) {
+						totalNumofPages = 1;
 					}
 
-				} catch (UnsupportedEncodingException e) {
-					e.printStackTrace();
-				} catch (FileNotFoundException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
+					System.out.println("total pages:" + totalNumofPages);
+
+					try {
+						for (; curPageNbr <= totalNumofPages; curPageNbr++) {
+							System.out.println("storeCode:" + storeCode + ", Page:" + curPageNbr);
+							if (!downloadUtil.downloadSalesFile(salesExportURL, cookies, tempDir, fileName, HOST,
+									curPageNbr, year, month, day, storeCode, storeName, i)) {
+								currentStoreCode = storeCode;
+								currentStoreName = storeName;
+								currentStoreIndex = i;
+								driver.quit();
+								driver = null;
+								// driver = login();
+								// if (driver != null) {
+								// fileDownload(driver);
+								// }
+								success = false;
+								return success;
+							}
+							Thread.sleep(1000);
+
+							parseSalesFile(downloadDir, tempDir, fileName, curPageNbr, storeCode, storeName, dateStr1);
+							
+
+						}
+						try {
+							if (out != null) {
+								out.close();
+							}
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					resetIndexes();
+				} else {
+					if (driver != null) {
+						try {
+							driver.quit();
+						} catch (Exception e) {
+						}
+					}
+					currentStoreCode = storeCode;
+					currentStoreName = storeName;
+					currentStoreIndex = i;
+					driver.quit();
+					driver = null;
+					// driver = login();
+					// if (driver != null) {
+					// fileDownload(driver);
+					// }
+					client.close();
+					success = false;
+					return success;
+					// currentPage = currentPage;
+
 				}
+				
+				File waitMergeFile = new File(downloadDir+"/"+fileName);
+				
+				MergeFiles.mergeFile(downloadDir, waitMergeFile, mergeFile);
+				
+				
 			}
-
-		}
-
-		try {
-			out.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			
+			
+			
+			success = true;
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
+		return success;
 	}
 
 	public static void fileDownload(WebDriver driver) throws Exception {
@@ -265,8 +261,8 @@ public class DennisSalesDownload {
 		}
 	}
 
-	public static void parseFile(String downloadDir, String tempDir, String fileName, int curPageNbr, String storeCode,
-			String storeName, String dateStr1) {
+	public static void parseSalesFile(String downloadDir, String tempDir, String fileName, int curPageNbr,
+			String storeCode, String storeName, String dateStr1) {
 		char seperator = '\t';
 		File tempFile = new File(tempDir + File.separator + fileName);
 		File salesFile = new File(downloadDir + File.separator + fileName);
@@ -285,7 +281,7 @@ public class DennisSalesDownload {
 			// boolean firstTimeCountRows = true;
 			boolean secondRow = true;
 			int totalColumns = 0;
-			System.out.println("parseFile现在操作的页面：" + curPageNbr);
+//			System.out.println("parseFile现在操作的页面：" + curPageNbr);
 			for (Element row : rows) {
 				String line = "";
 				if (firstRow) {
@@ -330,7 +326,7 @@ public class DennisSalesDownload {
 			out.close();
 
 			if (tempFile.exists()) {
-				System.out.println("temp file: " + fileName + " deleted:" + tempFile.delete());
+//				System.out.println("temp file: " + fileName + " deleted:" + tempFile.delete());
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -339,5 +335,92 @@ public class DennisSalesDownload {
 			return;
 		}
 	}
+
+	public static void fileDownload() {
+		WebDriver driver = login();
+		boolean success = false;
+		if (driver != null) {
+			success = DownloadSales(driver);
+		}
+
+		if (!success) {
+			System.out.println("download not completed, retrying/resuming!");
+			fileDownload();
+		} else {
+			System.out.println("Finished downloading!");
+		}
+
+	}
+
+	public static WebDriver login() {
+		FirefoxOptions options = new FirefoxOptions();
+		WebDriver driver = null;
+		driver = new FirefoxDriver(options);
+		// driver.setJavascriptEnabled(true);
+		driver.manage().timeouts().implicitlyWait(60, TimeUnit.SECONDS);
+		// TODO Auto-generated method stub
+		driver.get(DENNISURL);
+		System.out.println("log in to Dennis portal");
+
+		try {
+
+			driver.findElement(By.name("Name")).clear();
+			driver.findElement(By.name("Name")).sendKeys(userName);
+			System.out.println("Input user ID: " + userName);
+
+			driver.findElement(By.name("Password")).clear();
+			driver.findElement(By.name("Password")).sendKeys(password);
+			System.out.println("Input PWD: " + password);
+
+			// 点击登录链接
+			driver.findElement(By.name("enter")).click();
+			Thread.sleep(3000);
+
+			String title = new String(driver.getTitle());
+			if (title.contains("厂商管理")) {
+
+				System.out.println("login success");
+
+			} else {
+				System.out.println("login failed");
+				driver.quit();
+				driver = null;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.out.println("Connection Refused : " + e);
+			driver.quit();
+			driver = null;
+		}
+		return driver;
+	}
+
+	public static void resetIndexes() {
+		currentStoreCode = "";
+		currentStoreName = "";
+		currentStoreIndex = 1;
+		currentPageNbr = 1;
+	}
+	
+	
+	private static void addSalesHeader(String fileName, String downloadDir, OutputStreamWriter out) {
+		try {
+			StringBuilder line = new StringBuilder("商品代号\t条码\t商品名称\t规格\t销售数量\t销售金额\t门店编号\t门店名称\t时间\r\n");
+			File file = new File(downloadDir + File.separator + fileName);
+			if (!(new File(downloadDir + File.separator).exists())) {
+				new File(downloadDir + File.separator).mkdirs();
+			}
+			out = new OutputStreamWriter(new java.io.FileOutputStream(file,true), "UTF-8");
+			out.write(line.toString());
+			out.flush();
+		} catch (UnsupportedEncodingException e2) {
+			e2.printStackTrace();
+		} catch (FileNotFoundException e2) {
+			e2.printStackTrace();
+		} catch (IOException e2) {
+			e2.printStackTrace();
+		}
+	}
+	
 
 }

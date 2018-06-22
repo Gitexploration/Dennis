@@ -61,7 +61,7 @@ public class DennisInventoryDownload {
 	public static int currentStoreIndex = 1;
 
 	public static void main(String[] args) {
-		System.setProperty("webdriver.gecko.driver", "C:/KSJ/data/geckodriver.exe");
+		System.setProperty("webdriver.gecko.driver", "D:/ksj_soft/geckodriver.exe");
 		// System.setProperty("webdriver.firefox.bin","C:/Program Files
 		// (x86)/Mozilla Firefox/firefox.exe");
 		fileDownload();
@@ -256,7 +256,7 @@ public class DennisInventoryDownload {
 				int curPageNbr = currentPageNbr;
 				Element element = es.get(i);
 				String storeInfo = element.text();
-				System.out.println("当前第" + (i - 1) + "门店:" + storeInfo);
+				System.out.println("当前第" + i  + "门店:" + storeInfo);
 				String storeCode = element.val().toString().trim();
 				String storeName = storeInfo.split("/")[1].trim();
 
