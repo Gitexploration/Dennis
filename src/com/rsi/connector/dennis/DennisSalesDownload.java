@@ -398,7 +398,7 @@ public class DennisSalesDownload {
 	public static void resetIndexes() {
 		currentStoreCode = "";
 		currentStoreName = "";
-		currentStoreIndex = 1;
+		currentStoreIndex = 2;
 		currentPageNbr = 1;
 	}
 	

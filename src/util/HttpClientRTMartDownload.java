@@ -147,7 +147,7 @@ public class HttpClientRTMartDownload {
 							log.info("filelongth: " + filelongth);
 							log.info(fileName + " File download successfully!!!");
 							success = true;
-							DennisInventoryDownload.resetIndexes();
+							DennisSalesDownload.resetIndexes();
 							break;
 							// do something useful with the response
 						}
